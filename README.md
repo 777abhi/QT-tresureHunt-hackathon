@@ -1,4 +1,6 @@
-# QT-tresureHunt-hackathon
+# 🎁 🎊 🪅
+
+# QT Treasure Hunt hackathon
 a company internal global event
 
 # Pre-requisite
@@ -26,5 +28,11 @@ npm install
 [Script Execution](QT-tresureHunt-hackathon-Abhinav-Sharma.webm)
 
 # HTML playwright report 
-[Report Page 1 of 2](Playwright-Test-Report-1.png)
-[Report Page 2 of 2](Playwright-Test-Report-2.png)
+## [Report Page 1 of 2](Playwright-Test-Report-1.png)
+
+<img width="599" alt="Playwright-Test-Report-1" src="Playwright-Test-Report-1.png">
+
+## [Report Page 2 of 2](Playwright-Test-Report-2.png)
+
+<img width="588" alt="Playwright-Test-Report-2" src="Playwright-Test-Report-2.png">
+
