@@ -1,0 +1,612 @@
+const { test, expect } = require("@playwright/test");
+const { createWorker } = require("tesseract.js");
+import WebSocket from "ws";
+const fs = require("fs");
+
+let up = "text=arrow_upward";
+let down = "text=arrow_downward";
+let left = "text=arrow_back";
+let right = "text=arrow_forward";
+let lastConsoleLog: any;
+let socketToken: any;
+
+
+
+
+test("test", async ({ page, browser }) => {
+  await page.goto("http://54.80.137.197:5000/");
+  await page.click(
+    "text=Qualithon is a field day organized by the Test Automation QTribe. This event req >> img"
+  );
+  await expect(page).toHaveURL("http://54.80.137.197:5000/intro");
+
+
+
+
+  await page.click('button:has-text("Start")');
+
+
+
+
+  await clickOnTheCorrectProceedButton(page);
+
+
+
+
+  await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
+
+  await page
+    .frame({
+      url: "https://www.youtube.com/embed/ePC7HV4Umx8?playsinline=1&enablejsapi=1&origin=http%3A%2F%2F54.80.137.197%3A5000&widgetid=1",
+    })
+    .click('[aria-label="Play"]');
+
+  await page.evaluate(() => {
+    return new Promise((resolve) => setTimeout(resolve, 10000));
+  });
+
+  // Click [aria-label="Mute (m)"]
+  await page
+    .frame({
+      url: "https://www.youtube.com/embed/ePC7HV4Umx8?playsinline=1&enablejsapi=1&origin=http%3A%2F%2F54.80.137.197%3A5000&widgetid=1",
+    })
+    .click('[aria-label="Mute (m)"]');
+
+  // Click button:has-text("Proceed")
+  await page.click('button:has-text("Proceed")');
+  await expect(page).toHaveURL("http://54.80.137.197:5000/c/crystal_maze");
+
+  // Refine this if time allows  - slove ARROW problem
+  // await solveCrystalMaze(page);
+
+
+
+
+
+
+  //Solve the maze
+  let locator = "//td[contains(@class, 'deep-purple')]";
+  let firstxLocationAndColorAsArray = await getLocationDetails(
+    page,
+    locator,
+    "Array"
+  );
+  if (
+    firstxLocationAndColorAsArray[1] == 0 &&
+    firstxLocationAndColorAsArray[4] == 8
+  ) {
+    await solveCM1(page);
+  } else if (
+    firstxLocationAndColorAsArray[1] == 0 &&
+    firstxLocationAndColorAsArray[4] == 2
+  ) {
+    await solveCM4(page);
+  }
+
+
+
+  //Select India on the MAP
+  await selectIndiaOnMap(page);
+
+
+
+
+
+  await solveNotABot(page);
+
+
+  
+
+  await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
+
+  let messageLocator  = page.locator("//div[@class='yellow lighten-3']");
+
+  let message = await messageLocator.innerText();
+  console.log(message);
+
+
+  socketToken = await getTokenFromSocketGateWebsite(browser,message);
+
+  //socketToken =  await getTokenFromSocketGate(message),
+  await page.fill("//input[@id='socketGateMessage']", socketToken);
+  await page.click("//button[normalize-space()='Submit']");
+  await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
+
+  
+  //   try{
+  // await solveCM1(page);
+  // } catch(e){
+  //     try{
+  //         await solveCM2(page);
+  //     }catch(e){
+  //         try{
+  //             await solveCM3(page);
+  //         }catch (e) {
+  //             await solveCM4(page)
+  //         }
+  //     }
+
+  // }
+});
+
+async function clickOnTheCorrectProceedButton(page: any) {
+  await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
+
+  let btnProceedList = await page.$$('button:has-text("Proceed")');
+  try {
+    for await (const btnProceed of btnProceedList) {
+      await btnProceed.click();
+    }
+  } catch (e) {}
+}
+async function solveCrystalMaze(page: any) {
+  await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
+
+  // let currentPosition = await page.locator("//td[contains(@class, 'deep-purple')]");
+  // await currentPosition.click();
+
+  //table[@id='maze']/tr/td"
+
+  let counter = 1;
+  let locatorList = await page.$$("//table[@id='maze']/tr/td");
+
+  for await (const locator of locatorList) {
+    let alt = await page.getAttribute(locator, "class");
+    if (alt.includes("deep-purple")) {
+      break;
+    }
+    counter++;
+  }
+
+  // while(true){
+  //   let locator = "//td[contains(@class, 'deep-purple')]";
+  //   let currentPositionAsString = await getLocationDetails(page, locator, 'String');
+  //   let firstxLocationAndColorAsArray = await getLocationDetails(page,locator, 'Array');
+  //   await page.click("text=arrow_forward");
+  //   let secondxLocationAndColorAsArray = await getLocationDetails(page,locator, 'Array');
+  //   while(firstxLocationAndColorAsArray[1] != secondxLocationAndColorAsArray[1])
+  //   {
+  //     await page.click("text=arrow_forward");
+  //   }
+
+  //   if(firstxLocationAndColorAsArray[4] != secondxLocationAndColorAsArray[4]){
+  //     await page.click("text=arrow_upward");
+  //   }else if(firstxLocationAndColorAsArray[4] != secondxLocationAndColorAsArray[4]){
+  //     await page.click("text=arrow_upward");
+
+  // }
+
+  //let locator = await page.$$('//*[@id="maze"]/tr[2]');
+  //console.log(await page.textContent('//*[@id="maze"]/tr[2]'));
+}
+async function getLocationDetails(page, locator, asArrayOrString) {
+  let alt = await page.getAttribute(locator, "class");
+
+  if (asArrayOrString === "Array") {
+    return Array.from(alt);
+  } else if (asArrayOrString === "String") {
+    return alt;
+  }
+}
+
+async function solveCM1(page: any) {
+  console.log("solveCM1");
+
+  await page.click(right);
+  await page.click(right);
+  await page.click(down);
+  await page.click(right);
+  await page.click(right);
+  await page.click(up);
+  await page.click(up);
+  await page.click(up);
+  await page.click(left);
+  await page.click(left);
+  await page.click(up);
+  await page.click(up);
+  await page.click(right);
+  await page.click(up);
+  await page.click(up);
+  await page.click(right);
+  await page.click(right);
+  await page.click(down);
+  await page.click(down);
+  await page.click(down);
+  await page.click(right);
+  await page.click(right);
+  await page.click(down);
+  await page.click(down);
+  await page.click(down);
+  await page.click(down);
+  await page.click(right);
+  await page.click(down);
+  await page.click(right);
+  await page.click(right);
+  await page.click(right);
+
+  // Click button:has-text("Submit")
+  await page.click('button:has-text("Submit")');
+  await expect(page).toHaveURL("http://54.80.137.197:5000/c/maps");
+}
+
+async function solveCM2(page: any) {
+  console.log("solveCM2");
+
+  await page.goto("http://54.80.137.197:5000/c/crystal_maze");
+
+  // Double click text=arrow_forward
+  await page.dblclick("text=arrow_forward");
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Double click text=arrow_forward
+  await page.dblclick("text=arrow_forward");
+
+  // Click a:has-text("arrow_upward")
+  await page.click('a:has-text("arrow_upward")');
+
+  // Triple click text=arrow_upward
+  await page.click("text=arrow_upward", {
+    clickCount: 3,
+  });
+
+  // Double click text=arrow_back
+  await page.dblclick("text=arrow_back");
+
+  // Double click text=arrow_upward
+  await page.dblclick("text=arrow_upward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_upward
+  await page.click("text=arrow_upward");
+
+  // Click text=arrow_upward
+  await page.click("text=arrow_upward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Triple click text=arrow_downward
+  await page.click("text=arrow_downward", {
+    clickCount: 3,
+  });
+
+  // Double click text=arrow_forward
+  await page.dblclick("text=arrow_forward");
+
+  // Click a:has-text("arrow_downward")
+  await page.click('a:has-text("arrow_downward")');
+
+  // 4× click
+  await page.click("text=arrow_downward", {
+    clickCount: 4,
+  });
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Triple click text=arrow_forward
+  await page.click("text=arrow_forward", {
+    clickCount: 3,
+  });
+
+  // Click button:has-text("Submit")
+  await page.click('button:has-text("Submit")');
+  await expect(page).toHaveURL("http://54.80.137.197:5000/c/maps");
+}
+
+async function solveCM3(page: any) {
+  console.log("solveCM3");
+
+  await page.goto("http://54.80.137.197:5000/c/crystal_maze");
+
+  // Double click text=arrow_forward
+  await page.dblclick("text=arrow_forward");
+
+  // Double click text=arrow_downward
+  await page.dblclick("text=arrow_downward");
+
+  // Double click text=arrow_forward
+  await page.dblclick("text=arrow_forward");
+
+  // Click text=arrow_upward
+  await page.click("text=arrow_upward");
+
+  // Triple click text=arrow_forward
+  await page.click("text=arrow_forward", {
+    clickCount: 3,
+  });
+
+  // Double click text=arrow_back
+  await page.dblclick("text=arrow_back");
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Click text=arrow_back
+  await page.click("text=arrow_back");
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Triple click text=arrow_back
+  await page.click("text=arrow_back", {
+    clickCount: 3,
+  });
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Click text=arrow_back
+  await page.click("text=arrow_back");
+
+  // Double click text=arrow_downward
+  await page.dblclick("text=arrow_downward");
+
+  // 4× click
+  await page.click("text=arrow_forward", {
+    clickCount: 4,
+  });
+
+  // Click text=arrow_back
+  await page.click("text=arrow_back");
+
+  // Click text=arrow_upward
+  await page.click("text=arrow_upward");
+
+  // Click text=arrow_upward
+  await page.click("text=arrow_upward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_upward
+  await page.click("text=arrow_upward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click button:has-text("Submit")
+  await page.click('button:has-text("Submit")');
+  await expect(page).toHaveURL("http://54.80.137.197:5000/c/maps");
+}
+
+async function solveCM4(page: any) {
+  console.log("solveCM4");
+  await page.goto("http://54.80.137.197:5000/c/crystal_maze");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Double click text=arrow_downward
+  await page.dblclick("text=arrow_downward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_upward
+  await page.click("text=arrow_upward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click a:has-text("arrow_downward")
+  await page.click('a:has-text("arrow_downward")');
+
+  // Double click text=arrow_downward
+  await page.dblclick("text=arrow_downward");
+
+  // Click text=arrow_back
+  await page.click("text=arrow_back");
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Double click text=arrow_back
+  await page.dblclick("text=arrow_back");
+
+  // Click text=arrow_back
+  await page.click("text=arrow_back");
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Click text=arrow_back
+  await page.click("text=arrow_back");
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Click text=arrow_downward
+  await page.click("text=arrow_downward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Triple click text=arrow_forward
+  await page.click("text=arrow_forward", {
+    clickCount: 3,
+  });
+
+  // Double click text=arrow_upward
+  await page.dblclick("text=arrow_upward");
+
+  // Click text=arrow_forward
+  await page.click("text=arrow_forward");
+
+  // Click text=arrow_upward
+  await page.click("text=arrow_upward");
+
+  // Double click text=arrow_forward
+  await page.dblclick("text=arrow_forward");
+
+  await page.click("text=arrow_back");
+
+  await page.click("text=arrow_upward");
+
+  await page.click("text=arrow_upward");
+
+  await page.click("text=arrow_forward");
+
+  await page.click("text=arrow_upward");
+
+  await page.click("text=arrow_forward");
+  await page.click("text=arrow_forward");
+
+  // Click button:has-text("Submit")
+  await page.click('button:has-text("Submit")');
+  await expect(page).toHaveURL("http://54.80.137.197:5000/c/maps");
+}
+
+async function selectIndiaOnMap(page: any) {
+  await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
+
+  // Click #OpenLayers_Layer_WMS_4 img
+  await page.click("#OpenLayers_Layer_WMS_4 img");
+
+  // Click :nth-match(img, 3)
+  await page.click(":nth-match(img, 3)");
+  // Press ArrowRight
+  await page.press("#map", "i");
+
+  for (let i = 0; i < 36; i++) {
+    await page.press("#map", "ArrowRight");
+  }
+  for (let i = 0; i < 11; i++) {
+    await page.press("#map", "ArrowUp");
+  }
+
+  //page.on('console', msg => console.log(msg.text()));
+
+  page.on("console", (msg) => (lastConsoleLog = msg.text()));
+
+  // Click button:has-text("Proceed")
+  await page.click('button:has-text("Proceed")');
+  await expect(page).toHaveURL("http://54.80.137.197:5000/c/not_a_bot");
+}
+
+async function solveNotABot(page: any) {
+  // let allPossibleCodes = ['exerc','dolor','venia','invol','zaaze','animi','tatio','nulla','incid','exear','quien','lorem'];
+
+  // let i =0;
+  // while(await page.url()=='http://54.80.137.197:5000/c/not_a_bot'){
+  //   await page.fill('[placeholder="Captcha Text"]', allPossibleCodes[i]);
+  //   await page.click('button:has-text("Submit Captcha")');
+  //   await page.click('text=Resume from checkpoint');
+  //   if(i==allPossibleCodes.length-1){
+  //     i=0;
+  //   }else{
+  //     i++;
+  //   }
+  // }
+
+  //while(await page.url()=='http://54.80.137.197:5000/c/not_a_bot'){
+
+  await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
+
+  // let locator = '//*[@id="notABotCaptchaImg"]';
+  // let alt = await page.getAttribute(locator, "src");
+  // alt = alt.replace("data:image/png;base64,", "");
+
+  // let base64 = alt;
+  // let imageBuffer = Buffer.from(base64, "base64");
+
+  // fs.writeFileSync("captcha.png", imageBuffer);
+
+  // const worker = createWorker({
+  //   //logger: (m) => console.log(m),
+  // });
+
+  // (async () => {
+  //   await worker.load();
+  //   await worker.loadLanguage('eng+chi_tra');
+  //   await worker.initialize('eng+chi_tra');
+  //   //console.log("Recognizing...");
+  //   const {
+  //     data: { text },
+  //   } = await worker.recognize(imageBuffer);
+  //   console.log("Recognized text:", text);
+  //   await page.fill('[placeholder="Captcha Text"]', text);
+  //   await worker.terminate();
+  // })();
+
+  // await page.click('button:has-text("Submit Captcha")');
+  // await page.click('text=Resume from checkpoint');
+
+  await page.fill('[placeholder="Captcha Text"]', lastConsoleLog);
+  await page.click('button:has-text("Submit Captcha")');
+}
+
+ async function getTokenFromSocketGate(message) {
+ 
+
+  let socket = new WebSocket("ws://54.80.137.197:5001");
+  let token:any;
+
+  socket.onopen =    async function (e) {
+     await socket.send(message);
+  };
+
+  socket.onmessage =    async function (event) {
+    //alert(`[message] Data received from server: ${event.data}`);
+
+    console.log(`[message] Data received from server: ${event.data}`);
+
+    token =  await `${event.data}`;
+  };
+
+  socket.onclose =  function (event) {
+    //alert(`[close] Connection closed.`);
+    console.log(`[close] Connection closed.`);
+  }
+
+  return token;
+}
+
+async function getTokenFromSocketGateWebsite(browser: any,message) {
+  const page = await browser.newPage();
+  await page.goto("http://livepersoninc.github.io/ws-test-page/");
+  await page.fill("//input[@id='serverSelected']",'ws://54.80.137.197:5001');
+  await page.click("//button[normalize-space()='Connect']");
+  await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
+  await page.fill("//textarea[@id='msgToServer']",message);
+  await page.click("//button[normalize-space()='Send Message']");
+  await page.evaluate(() => {
+    return new Promise((resolve) => setTimeout(resolve, 2000));
+  });
+  let tokenLocator = page.locator(".list-group .list-group-item");
+
+  let token = await tokenLocator.last().innerText();
+  token = token.substring(10);
+  await page.close();
+  return token;
+
+}
+

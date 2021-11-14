@@ -1,0 +1,6 @@
+{
+    "baseURL": "http://54.80.137.197:5000",
+    "webSoketClient": "http://livepersoninc.github.io/ws-test-page/",
+    "youtubeURL": "https://www.youtube.com/embed/ePC7HV4Umx8?playsinline=1&enablejsapi=1&origin=http%3A%2F%2F54.80.137.197%3A5000&widgetid=1",
+    "webSocketURL": "ws://54.80.137.197:5001"
+}
