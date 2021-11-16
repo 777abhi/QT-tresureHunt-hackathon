@@ -1,4 +1,4 @@
-//tresure-flow.spec.ts
+//treasure-flow.spec.ts
 const { test, expect } = require("@playwright/test");
 var settings = require("../settings.json");
 
@@ -151,7 +151,7 @@ async function solveCM1(page: any) {
 
   // Click button:has-text("Submit")
   await page.click('button:has-text("Submit")');
-  await expect(page).toHaveURL("http://54.80.137.197:5000/c/maps");
+  await expect(page).toHaveURL(settings.baseURL + "/c/maps");
 }
 
 async function solveCM4(page: any) {
