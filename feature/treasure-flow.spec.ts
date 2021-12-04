@@ -61,83 +61,39 @@ test("Automation Bot should complete the treseure hunt", async ({
     let endloop = true;
     var backTrack = [];
 
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+
     while (endloop) {
       let locatorCurrentPosition = "//td[contains(@class, 'deep-purple')]";
-      let locatorDestination = "//td[contains(@class, 'green')]";
 
-      let valueForlocatorCurrentPosition = await getLocationDetails(
+      let MazePointer = await getLocationDetails(
         page,
         locatorCurrentPosition,
         "Array"
       );
-      let valueForlocatorDestination = await getLocationDetails(
-        page,
-        locatorDestination,
-        "Array"
-      );
 
-      let valueForlocatorCurrentPositionX, valueForlocatorCurrentPositionY;
+      let valueX, valueY;
 
-      if (valueForlocatorCurrentPosition.length < 18) {
-        valueForlocatorCurrentPositionX =
-          valueForlocatorCurrentPosition.substring(1, 2);
-        valueForlocatorCurrentPositionY =
-          valueForlocatorCurrentPosition.substring(4, 5);
-      } else if (valueForlocatorCurrentPosition.length == 18) {
-        if (
-          Array.from(valueForlocatorCurrentPosition.substring(1, 3))[1] == " "
-        ) {
-          valueForlocatorCurrentPositionX =
-            valueForlocatorCurrentPosition.substring(1, 2);
-          valueForlocatorCurrentPositionY =
-            valueForlocatorCurrentPosition.substring(4, 6);
+      if (MazePointer.length < 18) {
+        valueX = MazePointer.substring(1, 2);
+        valueY = MazePointer.substring(4, 5);
+      } else if (MazePointer.length == 18) {
+        if (Array.from(MazePointer.substring(1, 3))[1] == " ") {
+          valueX = MazePointer.substring(1, 2);
+          valueY = MazePointer.substring(4, 6);
         } else {
-          valueForlocatorCurrentPositionX =
-            valueForlocatorCurrentPosition.substring(1, 3);
-          valueForlocatorCurrentPositionY =
-            valueForlocatorCurrentPosition.substring(5, 6);
+          valueX = MazePointer.substring(1, 3);
+          valueY = MazePointer.substring(5, 6);
         }
-      } else if (
-        valueForlocatorCurrentPosition.length > 18 &&
-        valueForlocatorCurrentPosition.length < 100
-      ) {
-        valueForlocatorCurrentPositionX =
-          valueForlocatorCurrentPosition.substring(1, 3);
-        valueForlocatorCurrentPositionY =
-          valueForlocatorCurrentPosition.substring(5, 7);
+      } else if (MazePointer.length > 18 && MazePointer.length < 100) {
+        valueX = MazePointer.substring(1, 3);
+        valueY = MazePointer.substring(5, 7);
       }
 
-      let down = await check(
-        page,
-        valueForlocatorCurrentPositionX,
-        valueForlocatorCurrentPositionY,
-        0,
-        1
-      );
-
-      let right = await check(
-        page,
-        valueForlocatorCurrentPositionX,
-        valueForlocatorCurrentPositionY,
-        1,
-        0
-      );
-
-      let left = await check(
-        page,
-        valueForlocatorCurrentPositionX,
-        valueForlocatorCurrentPositionY,
-        -1,
-        0
-      );
-
-      let up = await check(
-        page,
-        valueForlocatorCurrentPositionX,
-        valueForlocatorCurrentPositionY,
-        0,
-        -1
-      );
+      let down = await observeAround(page, valueX, valueY, 0, 1);
+      let right = await observeAround(page, valueX, valueY, 1, 0);
+      let left = await observeAround(page, valueX, valueY, -1, 0);
+      let up = await observeAround(page, valueX, valueY, 0, -1);
 
       backTrack.forEach((element) => {
         //check if the current position is in the backtrack array
@@ -147,7 +103,6 @@ test("Automation Bot should complete the treseure hunt", async ({
         else if (element == right) right = "0";
       });
 
-    
       if (up.includes("grey") || up.includes("green")) {
         await page.click(upW);
         allMoves.push("up");
@@ -185,7 +140,6 @@ test("Automation Bot should complete the treseure hunt", async ({
       }
 
       let counter = 0;
-
       let twoWaytracker = [up, down, left, right];
       twoWaytracker.forEach((element) => {
         if (element.includes("grey")) {
@@ -204,7 +158,6 @@ test("Automation Bot should complete the treseure hunt", async ({
       });
     }
     await page.click('button:has-text("Submit")');
-  
   });
 
   await test.step("Map - Select India", async () => {
@@ -248,8 +201,6 @@ async function getLocationDetails(page, locator, asArrayOrString) {
   }
 }
 
-
-
 async function selectIndiaOnMap(page: any) {
   await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
   await page.click("#OpenLayers_Layer_WMS_4 img");
@@ -290,53 +241,6 @@ async function getTokenFromSocketGateWebsite(browser: any, message) {
   await page.close();
   return token;
 }
-async function getupdatedTrack(page) {
-  var position = [];
-  let movement;
-  const matrix = new Array(12).fill(0).map(() => new Array(12).fill(0));
-  for (let i = 0; i < matrix.length; i++) {
-    for (let j = 0; j < matrix[i].length; j++) {
-      let locator =
-        "//td[contains(@class, " + "'x" + i + " " + "y" + j + "'" + ")]";
-      let value = await getLocationDetails(page, locator, "Array");
-
-      if (value.length > 12) {
-        console.log(value);
-        let valueAsArray = Array.from(value);
-
-        if (value.length > 12 && value.length < 16) {
-          position.push(valueAsArray[1], valueAsArray[4]);
-          movement = await makeDecision(position);
-        } else if (value.length == 16) {
-          position.push(
-            valueAsArray[1],
-            valueAsArray[4].toString() + valueAsArray[5].toString()
-          );
-
-          movement = await makeDecision(position);
-        } else if (value.length > 15) {
-          position.push(
-            valueAsArray[1].toString() + valueAsArray[2].toString(),
-            valueAsArray[5].toString() + valueAsArray[6].toString()
-          );
-
-          movement = await makeDecision(position);
-        }
-      }
-    }
-  }
-  return movement;
-}
-
-async function makeDecision(position) {
-  if (position.length >= 4) {
-    if (position[position.length - 2] > position[position.length - 4]) return 4;
-    else if (position[position.length - 1] > position[position.length - 3])
-      return 2;
-  }
-
-  return 4;
-}
 
 async function getLocator(xValue: unknown, yValue: number) {
   let locator =
@@ -345,7 +249,7 @@ async function getLocator(xValue: unknown, yValue: number) {
   return locator;
 }
 
-async function check(
+async function observeAround(
   page,
   valueForlocatorCurrentPositionX,
   valueForlocatorCurrentPositionY,
