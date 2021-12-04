@@ -2,12 +2,15 @@
 const { test, expect } = require("@playwright/test");
 var settings = require("../settings.json");
 
-let up = "text=arrow_upward";
-let down = "text=arrow_downward";
-let left = "text=arrow_back";
-let right = "text=arrow_forward";
+let upW = "text=arrow_upward";
+let downW = "text=arrow_downward";
+let leftW = "text=arrow_back";
+let rightW = "text=arrow_forward";
 let lastConsoleLog: any;
 let socketToken: any;
+let twoWaytrackerPosition = [];
+let allMoves = [];
+let i = 1;
 
 test("Automation Bot should complete the treseure hunt", async ({
   page,
@@ -55,23 +58,153 @@ test("Automation Bot should complete the treseure hunt", async ({
   );
 
   await test.step("Crystal Maze - Solve", async () => {
-    let locator = "//td[contains(@class, 'deep-purple')]";
-    let firstxLocationAndColorAsArray = await getLocationDetails(
-      page,
-      locator,
-      "Array"
-    );
-    if (
-      firstxLocationAndColorAsArray[1] == 0 &&
-      firstxLocationAndColorAsArray[4] == 8
-    ) {
-      await solveCM1(page);
-    } else if (
-      firstxLocationAndColorAsArray[1] == 0 &&
-      firstxLocationAndColorAsArray[4] == 2
-    ) {
-      await solveCM4(page);
+    let endloop = true;
+    var backTrack = [];
+
+    while (endloop) {
+      let locatorCurrentPosition = "//td[contains(@class, 'deep-purple')]";
+      let locatorDestination = "//td[contains(@class, 'green')]";
+
+      let valueForlocatorCurrentPosition = await getLocationDetails(
+        page,
+        locatorCurrentPosition,
+        "Array"
+      );
+      let valueForlocatorDestination = await getLocationDetails(
+        page,
+        locatorDestination,
+        "Array"
+      );
+
+      let valueForlocatorCurrentPositionX, valueForlocatorCurrentPositionY;
+
+      if (valueForlocatorCurrentPosition.length < 18) {
+        valueForlocatorCurrentPositionX =
+          valueForlocatorCurrentPosition.substring(1, 2);
+        valueForlocatorCurrentPositionY =
+          valueForlocatorCurrentPosition.substring(4, 5);
+      } else if (valueForlocatorCurrentPosition.length == 18) {
+        if (
+          Array.from(valueForlocatorCurrentPosition.substring(1, 3))[1] == " "
+        ) {
+          valueForlocatorCurrentPositionX =
+            valueForlocatorCurrentPosition.substring(1, 2);
+          valueForlocatorCurrentPositionY =
+            valueForlocatorCurrentPosition.substring(4, 6);
+        } else {
+          valueForlocatorCurrentPositionX =
+            valueForlocatorCurrentPosition.substring(1, 3);
+          valueForlocatorCurrentPositionY =
+            valueForlocatorCurrentPosition.substring(5, 6);
+        }
+      } else if (
+        valueForlocatorCurrentPosition.length > 18 &&
+        valueForlocatorCurrentPosition.length < 100
+      ) {
+        valueForlocatorCurrentPositionX =
+          valueForlocatorCurrentPosition.substring(1, 3);
+        valueForlocatorCurrentPositionY =
+          valueForlocatorCurrentPosition.substring(5, 7);
+      }
+
+      let down = await check(
+        page,
+        valueForlocatorCurrentPositionX,
+        valueForlocatorCurrentPositionY,
+        0,
+        1
+      );
+
+      let right = await check(
+        page,
+        valueForlocatorCurrentPositionX,
+        valueForlocatorCurrentPositionY,
+        1,
+        0
+      );
+
+      let left = await check(
+        page,
+        valueForlocatorCurrentPositionX,
+        valueForlocatorCurrentPositionY,
+        -1,
+        0
+      );
+
+      let up = await check(
+        page,
+        valueForlocatorCurrentPositionX,
+        valueForlocatorCurrentPositionY,
+        0,
+        -1
+      );
+
+      backTrack.forEach((element) => {
+        //check if the current position is in the backtrack array
+        if (element == up) up = "0";
+        else if (element == down) down = "0";
+        else if (element == left) left = "0";
+        else if (element == right) right = "0";
+      });
+
+    
+      if (up.includes("grey") || up.includes("green")) {
+        await page.click(upW);
+        allMoves.push("up");
+        backTrack.push(up);
+        i = 1;
+      } else if (right.includes("grey") || right.includes("green")) {
+        await page.click(rightW);
+        allMoves.push("right");
+        backTrack.push(right);
+        i = 1;
+      } else if (left.includes("grey") || left.includes("green")) {
+        await page.click(leftW);
+        allMoves.push("left");
+        backTrack.push(left);
+        i = 1;
+      } else if (down.includes("grey") || down.includes("green")) {
+        await page.click(downW);
+        allMoves.push("down");
+        backTrack.push(down);
+        i = 1;
+      } else {
+        if (allMoves[allMoves.length - i] == "right") {
+          await page.click(leftW);
+          i = i + 1;
+        } else if (allMoves[allMoves.length - i] == "left") {
+          await page.click(rightW);
+          i = i + 1;
+        } else if (allMoves[allMoves.length - i] == "up") {
+          await page.click(downW);
+          i = i + 1;
+        } else if (allMoves[allMoves.length - i] == "down") {
+          await page.click(upW);
+          i = i + 1;
+        }
+      }
+
+      let counter = 0;
+
+      let twoWaytracker = [up, down, left, right];
+      twoWaytracker.forEach((element) => {
+        if (element.includes("grey")) {
+          counter = counter + 1;
+          if (counter == 2) {
+            twoWaytrackerPosition.push(element);
+          }
+        }
+      });
+
+      let killLoop = [up, down, left, right];
+      killLoop.forEach((element) => {
+        if (element.includes("green")) {
+          endloop = false;
+        }
+      });
     }
+    await page.click('button:has-text("Submit")');
+  
   });
 
   await test.step("Map - Select India", async () => {
@@ -94,7 +227,6 @@ test("Automation Bot should complete the treseure hunt", async ({
   });
 });
 
-
 //All Business functions
 async function clickOnTheCorrectProceedButton(page: any) {
   await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
@@ -107,92 +239,16 @@ async function clickOnTheCorrectProceedButton(page: any) {
 }
 
 async function getLocationDetails(page, locator, asArrayOrString) {
-  let alt = await page.getAttribute(locator, "class");
-  if (asArrayOrString === "Array") {
-    return Array.from(alt);
-  } else if (asArrayOrString === "String") {
-    return alt;
+  try {
+    return await page.getAttribute(locator, "class");
+  } catch (e) {
+    console.log(e);
+
+    return "0";
   }
 }
 
-async function solveCM1(page: any) {
-  console.log("solveCM1");
-  await page.click(right);
-  await page.click(right);
-  await page.click(down);
-  await page.click(right);
-  await page.click(right);
-  await page.click(up);
-  await page.click(up);
-  await page.click(up);
-  await page.click(left);
-  await page.click(left);
-  await page.click(up);
-  await page.click(up);
-  await page.click(right);
-  await page.click(up);
-  await page.click(up);
-  await page.click(right);
-  await page.click(right);
-  await page.click(down);
-  await page.click(down);
-  await page.click(down);
-  await page.click(right);
-  await page.click(right);
-  await page.click(down);
-  await page.click(down);
-  await page.click(down);
-  await page.click(down);
-  await page.click(right);
-  await page.click(down);
-  await page.click(right);
-  await page.click(right);
-  await page.click(right);
 
-  // Click button:has-text("Submit")
-  await page.click('button:has-text("Submit")');
-  await expect(page).toHaveURL(settings.baseURL + "/c/maps");
-}
-
-async function solveCM4(page: any) {
-  console.log("solveCM4");
-  await page.click(right);
-  await page.click(right);
-  await page.dblclick(down);
-  await page.click(right);
-  await page.click(right);
-  await page.click(up);
-  await page.click(right);
-  await page.click(right);
-  await page.click(right);
-  await page.click(down);
-  await page.dblclick(down);
-  await page.click(left);
-  await page.click(down);
-  await page.dblclick(left);
-  await page.click(left);
-  await page.click(down);
-  await page.click(left);
-  await page.click(down);
-  await page.click(down);
-  await page.click(right);
-  await page.click(right, {
-    clickCount: 3,
-  });
-  await page.dblclick(up);
-  await page.click(right);
-  await page.click(up);
-  await page.dblclick(right);
-  await page.click(left);
-  await page.click(up);
-  await page.click(up);
-  await page.click(right);
-  await page.click(up);
-  await page.click(right);
-  await page.click(right);
-  await page.click('button:has-text("Submit")');
-  await expect(page).toHaveURL(settings.baseURL + "/c/maps");
-}
 
 async function selectIndiaOnMap(page: any) {
   await page.waitForLoadState("networkidle"); // This resolves after 'networkidle'
@@ -207,7 +263,7 @@ async function selectIndiaOnMap(page: any) {
   }
   page.on("console", (msg) => (lastConsoleLog = msg.text()));
   await page.click('button:has-text("Proceed")');
-  await expect(page).toHaveURL(settings.baseURL+"/c/not_a_bot");
+  await expect(page).toHaveURL(settings.baseURL + "/c/not_a_bot");
 }
 
 async function solveNotABot(page: any) {
@@ -233,4 +289,82 @@ async function getTokenFromSocketGateWebsite(browser: any, message) {
   token = token.substring(10);
   await page.close();
   return token;
+}
+async function getupdatedTrack(page) {
+  var position = [];
+  let movement;
+  const matrix = new Array(12).fill(0).map(() => new Array(12).fill(0));
+  for (let i = 0; i < matrix.length; i++) {
+    for (let j = 0; j < matrix[i].length; j++) {
+      let locator =
+        "//td[contains(@class, " + "'x" + i + " " + "y" + j + "'" + ")]";
+      let value = await getLocationDetails(page, locator, "Array");
+
+      if (value.length > 12) {
+        console.log(value);
+        let valueAsArray = Array.from(value);
+
+        if (value.length > 12 && value.length < 16) {
+          position.push(valueAsArray[1], valueAsArray[4]);
+          movement = await makeDecision(position);
+        } else if (value.length == 16) {
+          position.push(
+            valueAsArray[1],
+            valueAsArray[4].toString() + valueAsArray[5].toString()
+          );
+
+          movement = await makeDecision(position);
+        } else if (value.length > 15) {
+          position.push(
+            valueAsArray[1].toString() + valueAsArray[2].toString(),
+            valueAsArray[5].toString() + valueAsArray[6].toString()
+          );
+
+          movement = await makeDecision(position);
+        }
+      }
+    }
+  }
+  return movement;
+}
+
+async function makeDecision(position) {
+  if (position.length >= 4) {
+    if (position[position.length - 2] > position[position.length - 4]) return 4;
+    else if (position[position.length - 1] > position[position.length - 3])
+      return 2;
+  }
+
+  return 4;
+}
+
+async function getLocator(xValue: unknown, yValue: number) {
+  let locator =
+    "//td[contains(@class, " + "'x" + xValue + " " + "y" + yValue + "'" + ")]";
+
+  return locator;
+}
+
+async function check(
+  page,
+  valueForlocatorCurrentPositionX,
+  valueForlocatorCurrentPositionY,
+  arg0: number,
+  arg1: number
+) {
+  let xValue, yValue;
+  if (arg0 < 0 && valueForlocatorCurrentPositionX == 0) {
+    xValue = valueForlocatorCurrentPositionX;
+  } else {
+    xValue = +valueForlocatorCurrentPositionX + arg0;
+  }
+  if (arg1 < 0 && valueForlocatorCurrentPositionY == 0) {
+    yValue = valueForlocatorCurrentPositionY;
+  } else {
+    yValue = +valueForlocatorCurrentPositionY + arg1;
+  }
+
+  let locator = await getLocator(xValue, yValue);
+  let value = await getLocationDetails(page, locator, "Array");
+  return value;
 }
