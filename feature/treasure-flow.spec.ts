@@ -72,53 +72,75 @@ test("Automation Bot should complete the treseure hunt", async ({
       let mazePointerX, mazePointerY;
 
       if (mazePointer.length < 18) {
+        //example - x0 y2 deep-purple
         mazePointerX = mazePointer.substring(1, 2);
         mazePointerY = mazePointer.substring(4, 5);
       } else if (mazePointer.length == 18) {
         if (Array.from(mazePointer.substring(1, 3))[1] == " ") {
+          //example - x0 y20 deep-purple
           mazePointerX = mazePointer.substring(1, 2);
           mazePointerY = mazePointer.substring(4, 6);
         } else {
+          //example - x10 y8 deep-purple
           mazePointerX = mazePointer.substring(1, 3);
           mazePointerY = mazePointer.substring(5, 6);
         }
       } else if (mazePointer.length > 18 && mazePointer.length < 100) {
+        //example - x10 y20 deep-purple
         mazePointerX = mazePointer.substring(1, 3);
         mazePointerY = mazePointer.substring(5, 7);
       }
 
-      let down = await observeAround(page, mazePointerX, mazePointerY, 0, 1);
-      let right = await observeAround(page, mazePointerX, mazePointerY, 1, 0);
-      let left = await observeAround(page, mazePointerX, mazePointerY, -1, 0);
-      let up = await observeAround(page, mazePointerX, mazePointerY, 0, -1);
+      let lookDown = await observeAround(
+        page,
+        mazePointerX,
+        mazePointerY,
+        0,
+        1
+      );
+      let lookRight = await observeAround(
+        page,
+        mazePointerX,
+        mazePointerY,
+        1,
+        0
+      );
+      let lookLeft = await observeAround(
+        page,
+        mazePointerX,
+        mazePointerY,
+        -1,
+        0
+      );
+      let lookUp = await observeAround(page, mazePointerX, mazePointerY, 0, -1);
 
       backTrack.forEach((element) => {
         //check if the current position is in the backtrack array
-        if (element == up) up = "0";
-        else if (element == down) down = "0";
-        else if (element == left) left = "0";
-        else if (element == right) right = "0";
+        if (element == lookUp) lookUp = "0";
+        else if (element == lookDown) lookDown = "0";
+        else if (element == lookLeft) lookLeft = "0";
+        else if (element == lookRight) lookRight = "0";
       });
 
-      if (up.includes("grey") || up.includes("green")) {
+      if (lookUp.includes("grey") || lookUp.includes("green")) {
         await page.click(upW);
         allMoves.push("up");
-        backTrack.push(up);
+        backTrack.push(lookUp);
         i = 1;
-      } else if (right.includes("grey") || right.includes("green")) {
+      } else if (lookRight.includes("grey") || lookRight.includes("green")) {
         await page.click(rightW);
         allMoves.push("right");
-        backTrack.push(right);
+        backTrack.push(lookRight);
         i = 1;
-      } else if (left.includes("grey") || left.includes("green")) {
+      } else if (lookLeft.includes("grey") || lookLeft.includes("green")) {
         await page.click(leftW);
         allMoves.push("left");
-        backTrack.push(left);
+        backTrack.push(lookLeft);
         i = 1;
-      } else if (down.includes("grey") || down.includes("green")) {
+      } else if (lookDown.includes("grey") || lookDown.includes("green")) {
         await page.click(downW);
         allMoves.push("down");
-        backTrack.push(down);
+        backTrack.push(lookDown);
         i = 1;
       } else {
         if (allMoves[allMoves.length - i] == "right") {
@@ -137,7 +159,7 @@ test("Automation Bot should complete the treseure hunt", async ({
       }
 
       let counter = 0;
-      let twoWaytracker = [up, down, left, right];
+      let twoWaytracker = [lookUp, lookDown, lookLeft, lookRight];
       twoWaytracker.forEach((element) => {
         if (element.includes("grey")) {
           counter = counter + 1;
@@ -147,7 +169,7 @@ test("Automation Bot should complete the treseure hunt", async ({
         }
       });
 
-      let killLoop = [up, down, left, right];
+      let killLoop = [lookUp, lookDown, lookLeft, lookRight];
       killLoop.forEach((element) => {
         if (element.includes("green")) {
           greenPresent = false;
